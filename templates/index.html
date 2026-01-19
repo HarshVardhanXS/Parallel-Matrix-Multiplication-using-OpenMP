@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parallel Matrix Multiplication - OpenMP GUI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input[type="number"],
+        input[type="range"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="number"]:focus,
+        input[type="range"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        input[type="range"] {
+            cursor: pointer;
+            padding: 0;
+            height: 6px;
+        }
+
+        .range-value {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        button {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-run {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-run:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-run:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-reset {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-reset:hover {
+            background: #e0e0e0;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: none;
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .results.show {
+            display: block;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-item {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            border-radius: 4px;
+        }
+
+        .result-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+
+        .result-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .result-unit {
+            font-size: 14px;
+            color: #999;
+            margin-left: 5px;
+        }
+
+        .verification {
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin-top: 15px;
+            font-weight: 600;
+        }
+
+        .verification.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 2px solid #4caf50;
+        }
+
+        .verification.failed {
+            background: #ffebee;
+            color: #c62828;
+            border: 2px solid #f44336;
+        }
+
+        .error-message {
+            display: none;
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #f44336;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #1565c0;
+        }
+
+        .chart-container {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .chart-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            gap: 15px;
+            height: 150px;
+        }
+
+        .bar {
+            flex: 1;
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            border-radius: 4px 4px 0 0;
+            position: relative;
+            min-height: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .bar:hover {
+            transform: scaleY(1.05);
+        }
+
+        .bar-label {
+            position: absolute;
+            bottom: -25px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .bar-value {
+            position: absolute;
+            top: -25px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px;
+            color: #999;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 25px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .result-value {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Matrix Multiplication</h1>
+            <p>OpenMP Parallel Computing Benchmark</p>
+        </div>
+
+        <div class="info-box">
+            <strong>ℹ️ Tips:</strong> Matrix size 100-5000 and threads 1-32. Larger matrices show better speedup.
+        </div>
+
+        <form id="matrixForm">
+            <div class="form-group">
+                <label for="matrixSize">Matrix Size (NxN)</label>
+                <input type="number" id="matrixSize" name="matrixSize" min="100" max="5000" value="1000" required>
+                <small style="color: #999; display: block; margin-top: 5px;">Recommended: 500-2000 for demo</small>
+            </div>
+
+            <div class="form-group">
+                <label for="numThreads">Number of Threads: <span id="threadValue">4</span></label>
+                <input type="range" id="numThreads" name="numThreads" min="1" max="16" value="4">
+                <div class="range-value" id="rangeDisplay">4 threads</div>
+            </div>
+
+            <div class="button-group">
+                <button type="submit" class="btn-run" id="runBtn">Run Benchmark</button>
+                <button type="reset" class="btn-reset">Reset</button>
+            </div>
+        </form>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 15px; color: #666;">Running benchmark... Please wait</p>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+
+        <div class="results" id="results">
+            <div class="result-item">
+                <div class="result-label">Serial Execution Time</div>
+                <div class="result-value"><span id="serialTime">0</span><span class="result-unit">sec</span></div>
+            </div>
+
+            <div class="result-item">
+                <div class="result-label">Parallel Execution Time</div>
+                <div class="result-value"><span id="parallelTime">0</span><span class="result-unit">sec</span></div>
+            </div>
+
+            <div class="result-item">
+                <div class="result-label">Speedup</div>
+                <div class="result-value"><span id="speedup">0</span><span class="result-unit">x</span></div>
+            </div>
+
+            <div class="result-item">
+                <div class="result-label">Parallel Efficiency</div>
+                <div class="result-value"><span id="efficiency">0</span><span class="result-unit">%</span></div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">Execution Time Comparison</div>
+                <div class="bar-chart">
+                    <div class="bar" id="serialBar" style="height: 50%;">
+                        <div class="bar-value" id="serialBarValue">0s</div>
+                        <div class="bar-label">Serial</div>
+                    </div>
+                    <div class="bar" id="parallelBar" style="height: 30%;">
+                        <div class="bar-value" id="parallelBarValue">0s</div>
+                        <div class="bar-label">Parallel</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="verification" id="verification">
+                ✓ Verification: SUCCESS
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Parallel Matrix Multiplication using OpenMP | HPC Benchmark Tool</p>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('matrixForm');
+        const matrixSizeInput = document.getElementById('matrixSize');
+        const numThreadsInput = document.getElementById('numThreads');
+        const threadValue = document.getElementById('threadValue');
+        const rangeDisplay = document.getElementById('rangeDisplay');
+        const loading = document.getElementById('loading');
+        const errorMessage = document.getElementById('errorMessage');
+        const results = document.getElementById('results');
+        const runBtn = document.getElementById('runBtn');
+
+        // Update thread value display
+        numThreadsInput.addEventListener('input', () => {
+            const value = numThreadsInput.value;
+            threadValue.textContent = value;
+            rangeDisplay.textContent = `${value} thread${value != 1 ? 's' : ''}`;
+        });
+
+        // Form submission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const matrixSize = parseInt(matrixSizeInput.value);
+            const numThreads = parseInt(numThreadsInput.value);
+
+            // Validation
+            if (matrixSize < 100 || matrixSize > 5000) {
+                showError('Matrix size must be between 100 and 5000');
+                return;
+            }
+
+            if (numThreads < 1 || numThreads > 16) {
+                showError('Number of threads must be between 1 and 16');
+                return;
+            }
+
+            // Show loading, hide results and errors
+            loading.style.display = 'block';
+            results.classList.remove('show');
+            errorMessage.classList.remove('show');
+            runBtn.disabled = true;
+
+            try {
+                const response = await fetch('/run', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        matrix_size: matrixSize,
+                        num_threads: numThreads
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    showError(data.error || 'An error occurred');
+                    loading.style.display = 'none';
+                    runBtn.disabled = false;
+                    return;
+                }
+
+                displayResults(data.results);
+                loading.style.display = 'none';
+                results.classList.add('show');
+
+            } catch (error) {
+                showError('Network error: ' + error.message);
+                loading.style.display = 'none';
+            } finally {
+                runBtn.disabled = false;
+            }
+        });
+
+        function showError(message) {
+            errorMessage.textContent = '❌ ' + message;
+            errorMessage.classList.add('show');
+        }
+
+        function displayResults(data) {
+            // Update result values
+            document.getElementById('serialTime').textContent = data.serial_time.toFixed(6);
+            document.getElementById('parallelTime').textContent = data.parallel_time.toFixed(6);
+            document.getElementById('speedup').textContent = data.speedup.toFixed(2);
+            document.getElementById('efficiency').textContent = data.efficiency.toFixed(2);
+
+            // Update verification
+            const verification = document.getElementById('verification');
+            if (data.verification === 'SUCCESS') {
+                verification.classList.remove('failed');
+                verification.classList.add('success');
+                verification.innerHTML = '✓ Verification: SUCCESS - Results are correct!';
+            } else {
+                verification.classList.remove('success');
+                verification.classList.add('failed');
+                verification.innerHTML = '✗ Verification: FAILED - Results do not match!';
+            }
+
+            // Update chart
+            const maxTime = Math.max(data.serial_time, data.parallel_time);
+            const serialPercent = (data.serial_time / maxTime) * 100;
+            const parallelPercent = (data.parallel_time / maxTime) * 100;
+
+            document.getElementById('serialBar').style.height = serialPercent + '%';
+            document.getElementById('parallelBar').style.height = parallelPercent + '%';
+
+            document.getElementById('serialBarValue').textContent = data.serial_time.toFixed(3) + 's';
+            document.getElementById('parallelBarValue').textContent = data.parallel_time.toFixed(3) + 's';
+        }
+
+        // Form reset
+        form.addEventListener('reset', () => {
+            results.classList.remove('show');
+            errorMessage.classList.remove('show');
+            loading.style.display = 'none';
+            numThreadsInput.value = 4;
+            threadValue.textContent = '4';
+            rangeDisplay.textContent = '4 threads';
+        });
+    </script>
+</body>
+</html>
